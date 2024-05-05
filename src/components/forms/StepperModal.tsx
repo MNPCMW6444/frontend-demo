@@ -6,15 +6,21 @@ import {
     Grid, Typography,
 } from "@mui/material";
 import {PrimaryButton} from "../hoc";
-import {ReactNode, useCallback, useMemo, useState} from "react";
-import nameUI from "../steps/nameUI.tsx";
-import ageUI from "../steps/ageUI.tsx";
+import {ReactNode, useCallback, useEffect, useMemo, useState} from "react";
+import {renderNameUI, validateName} from "../steps/nameUI";
+import {renderAgeUI, validateAge} from "../steps/ageUI";
 
-export type RenderStepFunctionType<D> = (stepState: D | undefined, setStepState: (newState: D) => void, setIsInvalid: (isInvalid: boolean) => void) => ReactNode
+export type RenderStepFunctionType<D> = (stepState: D | undefined, setStepState: (newState: D) => void) => ReactNode
+export type ValidateStepFunctionType<D> = (stepState: D | undefined) => boolean
 
-const steps: RenderStepFunctionType<any>[] = [
-    nameUI,
-    ageUI
+interface Step {
+    render: RenderStepFunctionType<any>,
+    validate: ValidateStepFunctionType<any>
+}
+
+const steps: Step[] = [
+    {render: renderNameUI, validate: validateName},
+    {render: renderAgeUI, validate: validateAge},
 ]
 
 interface StepperModalProps {
@@ -47,7 +53,11 @@ const StepperModal = ({closeModalFunction}: StepperModalProps) => {
         closeModalFunction()
     }
 
-    const currentStep = steps[step]
+
+    useEffect(() => {
+        setIsCurrentStepInvalid(step === totalSteps - 1 ? false : steps[step].validate(formState[step]))
+    }, [formState, step]);
+
     return <Dialog
         open
         onClose={closeModalFunction}
@@ -59,7 +69,7 @@ const StepperModal = ({closeModalFunction}: StepperModalProps) => {
         <DialogContent>
             {step === totalSteps - 1 ?
                 <Typography>Stringified Summery: {JSON.stringify(formState)}</Typography>
-                : currentStep(stepState, setStepState, (isInvalid) => setIsCurrentStepInvalid(isInvalid))}
+                : steps[step].render(stepState, setStepState)}
         </DialogContent>
         <DialogActions>
             <Grid container justifyContent="space-around">
